@@ -1,0 +1,15 @@
+name: "AutoSRE"
+version: "1.0.0"
+description: "A professional Microservices SRE simulation with cascading failures."
+entry_point: "server:app"
+sdk_version: "openenv-0.1.0"
+metadata:
+  category: "DevOps/SRE"
+  difficulty: "Hard"
+  tags: ["Microservices", "Incident Response", "Control Plane"]
+runtime:
+  port: 7860
+  resource_limits:
+    vcpu: 2
+    memory_gb: 8
+  execution_timeout_minutes: 20

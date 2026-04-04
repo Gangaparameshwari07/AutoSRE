@@ -1,0 +1,24 @@
+[project]
+name = "autosre-openenv"
+version = "1.0.0"
+description = "AutoSRE is an OpenEnv environment for microservice incident diagnosis and remediation."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic",
+    "huggingface_hub",
+    "python-dotenv",
+    "openai",
+    "pyyaml",
+    "openenv-core>=0.2.0",
+]
+
+[project.scripts]
+server = "server:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
