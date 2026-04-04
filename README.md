@@ -1,6 +1,6 @@
 ﻿---
 title: AutoSRE OpenEnv
-emoji: ":hammer_and_wrench:"
+emoji: "🛠️"
 colorFrom: blue
 colorTo: indigo
 sdk: docker
