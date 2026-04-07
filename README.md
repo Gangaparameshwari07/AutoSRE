@@ -24,6 +24,7 @@ AutoSRE implements the standard OpenEnv interaction pattern:
 - `reset()` initializes the environment to a task-specific failure scenario
 - `step(action)` applies one remediation action and returns the updated observation, reward, termination flag, and metadata
 - `state()` returns the current environment state without advancing the episode
+- `GET /tasks` exposes the graded task catalog, including explicit grader linkage and score bounds
 
 ## Action Space
 The agent may choose one of the following actions:
@@ -75,6 +76,13 @@ Key properties:
 
 ## Grading
 Each task is evaluated with a deterministic grader that returns a score strictly inside the `(0.0, 1.0)` range.
+
+The control-plane API exposes this metadata for all tasks through `GET /tasks` and the `tasks` field on `/reset`:
+
+- `grader: "graders.grade_submission"`
+- `grader_enabled: true`
+- `score_range.min_exclusive: 0.0`
+- `score_range.max_exclusive: 1.0`
 
 The grader considers:
 

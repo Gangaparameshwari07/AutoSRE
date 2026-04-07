@@ -1,15 +1,5 @@
 from models import Observation, ServiceStatus
-
-MIN_VALID_SCORE = 0.01
-MAX_VALID_SCORE = 0.99
-
-
-def _clamp_open_interval(score: float) -> float:
-    """
-    The hackathon validator requires scores to be strictly inside (0, 1).
-    Keep the original ranking signal, but avoid invalid boundary values.
-    """
-    return round(min(MAX_VALID_SCORE, max(MIN_VALID_SCORE, score)), 2)
+from scoring import MIN_VALID_SCORE, clamp_open_interval
 
 def calculate_sre_score(obs: Observation, steps_taken: int) -> float:
     """
@@ -47,7 +37,7 @@ def calculate_sre_score(obs: Observation, steps_taken: int) -> float:
     # This provides a 'Rich Reward' landscape for the RL model.
     final_score = (0.5 * availability_score) + (0.3 * performance_score) + (0.2 * efficiency_score)
 
-    return _clamp_open_interval(final_score)
+    return clamp_open_interval(final_score)
 
 def grade_submission(task_id: str, final_obs: Observation, steps: int) -> float:
     """

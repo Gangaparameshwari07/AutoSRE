@@ -3,16 +3,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from definitions import TASKS
+from definitions import TASKS, get_public_task_catalog
 from environment import AutoSREEnv
 from llm_proxy import proxy_env_present, warm_proxy_once
 from models import Action
+from scoring import clamp_open_interval
 import uvicorn
 
 env = AutoSREEnv()
 PORT = int(os.getenv("PORT", "7860"))
-MIN_PUBLIC_SCORE = 0.01
-MAX_PUBLIC_SCORE = 0.99
 
 
 @asynccontextmanager
@@ -26,7 +25,7 @@ app = FastAPI(title="AutoSRE OpenEnv", lifespan=lifespan)
 
 
 def _clamp_public_score(score: float) -> float:
-    return round(min(MAX_PUBLIC_SCORE, max(MIN_PUBLIC_SCORE, float(score))), 2)
+    return clamp_open_interval(score)
 
 
 def _public_observation(observation):
@@ -83,7 +82,17 @@ async def reset_endpoint(task_id: str = "task_3_hard"):
     if proxy_env_present():
         warm_proxy_once()
     obs = _public_observation(env.reset(task_id=task_id))
-    return {"observation": obs, "status": "initialized", "available_tasks": list(TASKS)}
+    return {
+        "observation": obs,
+        "status": "initialized",
+        "available_tasks": list(TASKS),
+        "tasks": get_public_task_catalog(),
+    }
+
+
+@app.get("/tasks")
+async def tasks_endpoint():
+    return {"tasks": get_public_task_catalog()}
 
 
 @app.get("/state")
@@ -145,7 +154,7 @@ async def root_ui():
 
 def main() -> None:
     uvicorn.run(
-        "server:app", 
+        app,
         host="0.0.0.0", 
         port=PORT, 
         reload=False,

@@ -73,16 +73,25 @@ def check_control_plane_endpoints() -> None:
     client = TestClient(app)
     reset_response = client.post("/reset", params={"task_id": "task_1_easy"})
     assert_true(reset_response.status_code == 200, "POST /reset must return 200")
+    reset_json = reset_response.json()
+    assert_true(len(reset_json.get("tasks", [])) >= 3, "POST /reset must expose at least 3 task descriptors")
 
     state_response = client.get("/state")
     assert_true(state_response.status_code == 200, "GET /state must return 200")
     state_json = state_response.json()
     assert_true("observation" in state_json, "GET /state must include observation")
 
+    tasks_response = client.get("/tasks")
+    assert_true(tasks_response.status_code == 200, "GET /tasks must return 200")
+    tasks_json = tasks_response.json()
+    graded_tasks = [task for task in tasks_json.get("tasks", []) if task.get("grader_enabled")]
+    assert_true(len(graded_tasks) >= 3, "GET /tasks must expose at least 3 graded tasks")
+
     step_response = client.post("/step", json={"action": "restart_service", "target": "payment-service"})
     assert_true(step_response.status_code == 200, "POST /step must return 200")
     step_json = step_response.json()
     assert_true("observation" in step_json, "POST /step must include observation")
+    assert_true(0.0 < float(step_json["reward"]) < 1.0, "POST /step reward must be strictly within (0, 1)")
 
     root_response = client.get("/")
     assert_true(root_response.status_code == 200, "GET / must return 200")
@@ -111,6 +120,8 @@ def solve_task_with_api(client: TestClient, task_id: str) -> tuple[Observation, 
 
 def check_tasks_and_graders() -> None:
     assert_true(len(definitions.TASKS) >= 3, "At least 3 tasks are required")
+    graded_tasks = [task for task in definitions.TASKS.values() if task.get("grader_enabled") and task.get("grader")]
+    assert_true(len(graded_tasks) >= 3, "At least 3 tasks must declare graders")
     client = TestClient(app)
     for task_id in definitions.TASKS:
         _, _, score = solve_task_with_api(client, task_id)
@@ -135,7 +146,7 @@ def run_inference_against_live_server() -> None:
     env["PORT"] = VALIDATOR_SERVER_PORT
     env["DASHBOARD_URL"] = f"http://127.0.0.1:{VALIDATOR_SERVER_PORT}"
     server_process = subprocess.Popen(
-        [sys.executable, "server.py"],
+        [sys.executable, "-m", "uvicorn", "server.app:app", "--host", "127.0.0.1", "--port", VALIDATOR_SERVER_PORT],
         cwd=ROOT,
         env=env,
         stdout=subprocess.PIPE,

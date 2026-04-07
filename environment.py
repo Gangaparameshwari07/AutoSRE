@@ -2,6 +2,7 @@ import asyncio
 import random
 from typing import Dict, List, NamedTuple
 from models import Service, ServiceStatus, LogEntry, Observation, Action
+from scoring import clamp_open_interval
 
 # 1. We keep StepResult but use it to return a single object to satisfy Amazon Q
 class StepResult(NamedTuple):
@@ -41,7 +42,8 @@ class AutoSREEnv:
 
     def _get_observation(self) -> Observation:
         total_health = sum([1.0 if s.status == ServiceStatus.RUNNING else 0.5 if s.status == ServiceStatus.DEGRADED else 0.0 for s in self.services.values()])
-        health_score = total_health / len(self.service_names)
+        raw_health_score = total_health / len(self.service_names)
+        health_score = clamp_open_interval(raw_health_score)
         
         return Observation(
             services=self.services,
@@ -50,6 +52,15 @@ class AutoSREEnv:
             alerts=[l.message for l in self.logs if l.level in ["ERROR", "CRITICAL"]][-3:],
             task_description=self.task_description
         )
+
+    def _raw_health_score(self) -> float:
+        total_health = sum(
+            [
+                1.0 if s.status == ServiceStatus.RUNNING else 0.5 if s.status == ServiceStatus.DEGRADED else 0.0
+                for s in self.services.values()
+            ]
+        )
+        return total_health / len(self.service_names)
 
     def state(self) -> Observation:
         """Return the current environment state for validators and control plane clients."""
@@ -147,7 +158,7 @@ class AutoSREEnv:
         # Using keywords (observation=obs) stops the Amazon Q warning.
         return StepResult(
             observation=obs,
-            reward=obs.system_health_score,
-            done=(self.step_count >= 10 or obs.system_health_score >= 1.0),
+            reward=clamp_open_interval(obs.system_health_score),
+            done=(self.step_count >= 10 or self._raw_health_score() >= 1.0),
             info={}
         )
