@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -8,11 +9,20 @@ from llm_proxy import proxy_env_present, warm_proxy_once
 from models import Action
 import uvicorn
 
-app = FastAPI(title="AutoSRE OpenEnv")
 env = AutoSREEnv()
 PORT = int(os.getenv("PORT", "7860"))
 MIN_PUBLIC_SCORE = 0.01
 MAX_PUBLIC_SCORE = 0.99
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if proxy_env_present():
+        warm_proxy_once()
+    yield
+
+
+app = FastAPI(title="AutoSRE OpenEnv", lifespan=lifespan)
 
 
 def _clamp_public_score(score: float) -> float:
@@ -73,12 +83,16 @@ async def reset_endpoint(task_id: str = "task_3_hard"):
 
 @app.get("/state")
 async def state_endpoint():
+    if proxy_env_present():
+        warm_proxy_once()
     return {"observation": _public_observation(env.state())}
 
 
 @app.post("/step")
 async def step_endpoint(action: Action):
     try:
+        if proxy_env_present():
+            warm_proxy_once()
         return _serialize_step_result(env.step(action))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -86,6 +100,8 @@ async def step_endpoint(action: Action):
 
 @app.get("/", response_class=HTMLResponse)
 async def root_ui():
+    if proxy_env_present():
+        warm_proxy_once()
     obs = env.state()
     dashboard_text = _render_dashboard_text()
     services_html = "".join([

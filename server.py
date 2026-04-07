@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -8,11 +9,20 @@ from llm_proxy import proxy_env_present, warm_proxy_once
 from models import Action
 import uvicorn
 
-app = FastAPI(title="AutoSRE OpenEnv")
 env = AutoSREEnv()
 PORT = int(os.getenv("PORT", "7860"))
 MIN_PUBLIC_SCORE = 0.01
 MAX_PUBLIC_SCORE = 0.99
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if proxy_env_present():
+        warm_proxy_once()
+    yield
+
+
+app = FastAPI(title="AutoSRE OpenEnv", lifespan=lifespan)
 
 
 def _clamp_public_score(score: float) -> float:
@@ -79,6 +89,8 @@ async def reset_endpoint(task_id: str = "task_3_hard"):
 @app.get("/state")
 async def state_endpoint():
     """Return the current cluster state as JSON."""
+    if proxy_env_present():
+        warm_proxy_once()
     obs = _public_observation(env.state())
     return {"observation": obs}
 
@@ -86,6 +98,8 @@ async def state_endpoint():
 async def step_endpoint(action: Action):
     """Run a single environment action and return a JSON-safe payload."""
     try:
+        if proxy_env_present():
+            warm_proxy_once()
         result = env.step(action)
         
         return _serialize_step_result(result)
@@ -102,6 +116,8 @@ async def root_ui():
     A simple dashboard so you (and the judges) can see the cluster status.
     This fulfills the 'Enable Web Interface' suggestion from the bootcamp.
     """
+    if proxy_env_present():
+        warm_proxy_once()
     obs = env._get_observation()
     dashboard_text = _render_dashboard_text()
     services_html = "".join([
