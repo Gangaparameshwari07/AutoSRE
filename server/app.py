@@ -66,10 +66,7 @@ async def reset_endpoint(task_id: str = "task_3_hard"):
     if task_id not in TASKS:
         raise HTTPException(status_code=400, detail=f"Unknown task_id: {task_id}")
     if proxy_env_present():
-        try:
-            warm_proxy_once()
-        except Exception as exc:
-            print(f"[WARN] LiteLLM proxy warmup failed: {exc}", flush=True)
+        warm_proxy_once()
     obs = _public_observation(env.reset(task_id=task_id))
     return {"observation": obs, "status": "initialized", "available_tasks": list(TASKS)}
 

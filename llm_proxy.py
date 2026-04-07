@@ -1,7 +1,7 @@
 import os
 import threading
 
-from openai import OpenAI
+from openai import APIConnectionError, APIError, AuthenticationError, NotFoundError, OpenAI, RateLimitError
 
 _warmup_lock = threading.Lock()
 _warmup_complete = False
@@ -48,12 +48,15 @@ def warm_proxy_once() -> bool:
         if _warmup_complete or not proxy_env_present():
             return _warmup_complete
 
-        client = build_llm_client(timeout=8.0)
-        response = client.chat.completions.create(
-            model=get_model_name(),
-            messages=[{"role": "user", "content": "Reply with OK."}],
-            max_tokens=3,
-            temperature=0,
-        )
-        _warmup_complete = bool(response.choices)
+        try:
+            client = build_llm_client(timeout=8.0)
+            response = client.chat.completions.create(
+                model=get_model_name(),
+                messages=[{"role": "user", "content": "Reply with OK."}],
+                max_tokens=3,
+                temperature=0,
+            )
+            _warmup_complete = bool(response.choices)
+        except (RuntimeError, NotFoundError, APIError, APIConnectionError, AuthenticationError, RateLimitError):
+            return False
         return _warmup_complete

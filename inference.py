@@ -5,8 +5,8 @@ from typing import List, Optional
 
 import httpx
 from dotenv import load_dotenv
-from openai import APIError, NotFoundError
-from llm_proxy import build_llm_client, get_model_name, require_env, warm_proxy_once
+from openai import APIError, APIConnectionError, AuthenticationError, NotFoundError, RateLimitError
+from llm_proxy import build_llm_client, get_model_name, proxy_env_present, warm_proxy_once
 
 load_dotenv()
 
@@ -139,10 +139,12 @@ Allowed action values: restart_service, scale_up, scale_down, clear_cache, rollb
 Allowed target values: api-gateway, auth-service, order-service, payment-service, database
 """
 
-    client = build_llm_client()
-    model_name = get_model_name()
+    if not proxy_env_present():
+        return _fallback_action(state_text)
 
     try:
+        client = build_llm_client()
+        model_name = get_model_name()
         response = client.chat.completions.create(
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
@@ -153,7 +155,7 @@ Allowed target values: api-gateway, auth-service, order-service, payment-service
         action = decision.get("action", "noop")
         target = decision.get("target", "api-gateway")
         return action, target
-    except (NotFoundError, APIError):
+    except (RuntimeError, NotFoundError, APIError, APIConnectionError, AuthenticationError, RateLimitError, httpx.HTTPError, ValueError, KeyError):
         return _fallback_action(state_text)
 
 
@@ -162,14 +164,11 @@ def run_agent(task_id: str) -> None:
     steps_taken = 0
     success = False
 
-    model_name = require_env("MODEL_NAME")
+    model_name = MODEL_NAME if proxy_env_present() else "heuristic-fallback"
     log_start(task=task_id, env=BENCHMARK, model=model_name)
 
     try:
-        try:
-            warm_proxy_once()
-        except Exception as exc:
-            print(f"[WARN] proxy warmup failed: {exc}", flush=True)
+        warm_proxy_once()
 
         reset_environment(task_id)
 

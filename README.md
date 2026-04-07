@@ -105,13 +105,14 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Required Environment Variables
+## Optional LLM Environment Variables
 - `API_BASE_URL`
 - `MODEL_NAME`
 - `API_KEY`
 
 ## Configuration and Secrets
 AutoSRE reads runtime configuration from environment variables. Sensitive credentials are not hardcoded in the codebase.
+The baseline agent can run without these LLM variables by falling back to a deterministic heuristic policy, which is useful for validator environments that do not inject model settings.
 
 Recommended deployment practice:
 

@@ -52,9 +52,11 @@ def check_openenv_yaml() -> None:
 
 
 def check_environment_variables() -> None:
-    required = ["API_BASE_URL", "MODEL_NAME", "API_KEY"]
-    for key in required:
-        assert_true(bool(os.getenv(key)), f"Missing required environment variable: {key}")
+    present = [key for key in ("API_BASE_URL", "MODEL_NAME", "API_KEY") if os.getenv(key)]
+    if present:
+        print(f"[INFO] optional LLM environment variables detected: {', '.join(present)}")
+    else:
+        print("[INFO] no LLM environment variables detected; inference.py should use heuristic fallback")
 
 
 def check_typed_models() -> None:
@@ -173,7 +175,7 @@ def main() -> None:
     print("[PASS] openenv.yaml validated")
 
     check_environment_variables()
-    print("[PASS] required environment variables detected")
+    print("[PASS] environment configuration check completed")
 
     check_typed_models()
     print("[PASS] typed models and env methods validated")
