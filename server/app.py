@@ -2,6 +2,7 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from definitions import TASKS
 from environment import AutoSREEnv
 from models import Action
 import uvicorn
@@ -9,6 +10,21 @@ import uvicorn
 app = FastAPI(title="AutoSRE OpenEnv")
 env = AutoSREEnv()
 PORT = int(os.getenv("PORT", "7860"))
+MIN_PUBLIC_SCORE = 0.01
+MAX_PUBLIC_SCORE = 0.99
+
+
+def _clamp_public_score(score: float) -> float:
+    return round(min(MAX_PUBLIC_SCORE, max(MIN_PUBLIC_SCORE, float(score))), 2)
+
+
+def _public_observation(observation):
+    if hasattr(observation, "model_copy"):
+        return observation.model_copy(
+            update={"system_health_score": _clamp_public_score(observation.system_health_score)}
+        )
+    observation.system_health_score = _clamp_public_score(observation.system_health_score)
+    return observation
 
 
 def _serialize_step_result(result):
@@ -19,8 +35,10 @@ def _serialize_step_result(result):
     else:
         raise TypeError(f"Unsupported step result type: {type(result).__name__}")
 
-    observation = payload["observation"]
+    observation = _public_observation(payload["observation"])
     payload["observation"] = observation.model_dump() if hasattr(observation, "model_dump") else observation
+    if "reward" in payload:
+        payload["reward"] = _clamp_public_score(payload["reward"])
     return payload
 
 
@@ -44,13 +62,15 @@ def _render_dashboard_text():
 
 @app.post("/reset")
 async def reset_endpoint(task_id: str = "task_3_hard"):
-    obs = env.reset(task_id=task_id)
-    return {"observation": obs, "status": "initialized"}
+    if task_id not in TASKS:
+        raise HTTPException(status_code=400, detail=f"Unknown task_id: {task_id}")
+    obs = _public_observation(env.reset(task_id=task_id))
+    return {"observation": obs, "status": "initialized", "available_tasks": list(TASKS)}
 
 
 @app.get("/state")
 async def state_endpoint():
-    return {"observation": env.state()}
+    return {"observation": _public_observation(env.state())}
 
 
 @app.post("/step")

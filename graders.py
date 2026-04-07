@@ -1,5 +1,16 @@
 from models import Observation, ServiceStatus
 
+MIN_VALID_SCORE = 0.01
+MAX_VALID_SCORE = 0.99
+
+
+def _clamp_open_interval(score: float) -> float:
+    """
+    The hackathon validator requires scores to be strictly inside (0, 1).
+    Keep the original ranking signal, but avoid invalid boundary values.
+    """
+    return round(min(MAX_VALID_SCORE, max(MIN_VALID_SCORE, score)), 2)
+
 def calculate_sre_score(obs: Observation, steps_taken: int) -> float:
     """
     The 'Final Exam' for the agent. Returns a value between 0.0 and 1.0.
@@ -35,8 +46,8 @@ def calculate_sre_score(obs: Observation, steps_taken: int) -> float:
     # FINAL WEIGHTED CALCULATION
     # This provides a 'Rich Reward' landscape for the RL model.
     final_score = (0.5 * availability_score) + (0.3 * performance_score) + (0.2 * efficiency_score)
-    
-    return round(final_score, 2)
+
+    return _clamp_open_interval(final_score)
 
 def grade_submission(task_id: str, final_obs: Observation, steps: int) -> float:
     """
@@ -45,6 +56,6 @@ def grade_submission(task_id: str, final_obs: Observation, steps: int) -> float:
     # If the API Gateway is still crashed, it's an automatic failure (0.0) 
     # because the user can't even access the site.
     if final_obs.services["api-gateway"].status != ServiceStatus.RUNNING:
-        return 0.0
-        
+        return MIN_VALID_SCORE
+
     return calculate_sre_score(final_obs, steps)

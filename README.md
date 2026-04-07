@@ -74,7 +74,7 @@ Key properties:
 - unnecessary or ineffective actions do not improve reward
 
 ## Grading
-Each task is evaluated with a deterministic grader that returns a score in the `0.0-1.0` range.
+Each task is evaluated with a deterministic grader that returns a score strictly inside the `(0.0, 1.0)` range.
 
 The grader considers:
 
@@ -82,7 +82,7 @@ The grader considers:
 - system performance
 - recovery efficiency
 
-If the API gateway remains unavailable at the end of the episode, the submission receives a failure score for that run.
+If the API gateway remains unavailable at the end of the episode, the submission receives the minimum non-zero failure score for that run so the result remains validator-compliant.
 
 ## Project Structure
 - `environment.py`: core simulation logic and environment state transitions
@@ -184,8 +184,8 @@ This project is configured for deployment as a Docker-based Hugging Face Space. 
 ## Baseline Results
 Observed local baseline grader results:
 
-- `task_1_easy`: `1.00`
-- `task_2_medium`: `1.00`
+- `task_1_easy`: `0.99`
+- `task_2_medium`: `0.99`
 - `task_3_hard`: `0.99`
 
 ## Submission Status

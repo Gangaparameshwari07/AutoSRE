@@ -103,7 +103,7 @@ def solve_task_with_api(client: TestClient, task_id: str) -> tuple[Observation, 
 
     assert_true(final_observation is not None, f"No observation returned while solving {task_id}")
     score = graders.grade_submission(task_id, final_observation, steps)
-    assert_true(0.0 <= score <= 1.0, f"Score out of range for {task_id}: {score}")
+    assert_true(0.0 < score < 1.0, f"Score must be strictly within (0, 1) for {task_id}: {score}")
     return final_observation, steps, score
 
 
