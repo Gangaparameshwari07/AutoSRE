@@ -5,7 +5,8 @@ from typing import List, Optional
 
 import httpx
 from dotenv import load_dotenv
-from openai import APIError, NotFoundError, OpenAI
+from openai import APIError, NotFoundError
+from llm_proxy import build_llm_client, get_model_name, require_env, warm_proxy_once
 
 load_dotenv()
 
@@ -16,19 +17,6 @@ TASK_NAME = os.getenv("TASK_ID", "task_3_hard")
 BENCHMARK = os.getenv("BENCHMARK", "autosre")
 MAX_STEPS = 10
 REQUEST_TIMEOUT = 30.0
-
-
-def _require_env(name: str, value: str | None) -> str:
-    if not value:
-        raise RuntimeError(f"{name} is not set. Add it to your environment or .env file.")
-    return value
-
-
-def _build_client() -> OpenAI:
-    return OpenAI(
-        base_url=_require_env("API_BASE_URL", os.getenv("API_BASE_URL")),
-        api_key=_require_env("API_KEY", os.getenv("API_KEY")),
-    )
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -151,8 +139,8 @@ Allowed action values: restart_service, scale_up, scale_down, clear_cache, rollb
 Allowed target values: api-gateway, auth-service, order-service, payment-service, database
 """
 
-    client = _build_client()
-    model_name = _require_env("MODEL_NAME", MODEL_NAME)
+    client = build_llm_client()
+    model_name = get_model_name()
 
     try:
         response = client.chat.completions.create(
@@ -174,9 +162,15 @@ def run_agent(task_id: str) -> None:
     steps_taken = 0
     success = False
 
-    log_start(task=task_id, env=BENCHMARK, model=_require_env("MODEL_NAME", MODEL_NAME))
+    model_name = require_env("MODEL_NAME")
+    log_start(task=task_id, env=BENCHMARK, model=model_name)
 
     try:
+        try:
+            warm_proxy_once()
+        except Exception as exc:
+            print(f"[WARN] proxy warmup failed: {exc}", flush=True)
+
         reset_environment(task_id)
 
         for step in range(1, MAX_STEPS + 1):
