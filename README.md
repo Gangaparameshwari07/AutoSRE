@@ -135,6 +135,15 @@ In a second terminal, run the baseline agent:
 python inference.py
 ```
 
+The agent reads `TASK_ID` from the environment. If `TASK_ID` is not set, it defaults to `task_3_hard`.
+
+To run a specific task locally:
+
+```powershell
+$env:TASK_ID="task_1_easy"
+python inference.py
+```
+
 The dashboard will be available at:
 
 `http://localhost:7860`
