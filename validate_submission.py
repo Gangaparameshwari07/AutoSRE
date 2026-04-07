@@ -52,7 +52,7 @@ def check_openenv_yaml() -> None:
 
 
 def check_environment_variables() -> None:
-    required = ["API_BASE_URL", "MODEL_NAME", "HF_TOKEN"]
+    required = ["API_BASE_URL", "MODEL_NAME", "API_KEY"]
     for key in required:
         assert_true(bool(os.getenv(key)), f"Missing required environment variable: {key}")
 

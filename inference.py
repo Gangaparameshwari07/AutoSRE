@@ -10,9 +10,7 @@ from openai import APIError, NotFoundError, OpenAI
 load_dotenv()
 
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:7860")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/openai/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
 IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 TASK_NAME = os.getenv("TASK_ID", "task_3_hard")
 BENCHMARK = os.getenv("BENCHMARK", "autosre")
@@ -26,10 +24,11 @@ def _require_env(name: str, value: str | None) -> str:
     return value
 
 
-client = OpenAI(
-    base_url=_require_env("API_BASE_URL", API_BASE_URL),
-    api_key=_require_env("HF_TOKEN", HF_TOKEN),
-)
+def _build_client() -> OpenAI:
+    return OpenAI(
+        base_url=_require_env("API_BASE_URL", os.getenv("API_BASE_URL")),
+        api_key=_require_env("API_KEY", os.getenv("API_KEY")),
+    )
 
 
 def log_start(task: str, env: str, model: str) -> None:
@@ -152,9 +151,12 @@ Allowed action values: restart_service, scale_up, scale_down, clear_cache, rollb
 Allowed target values: api-gateway, auth-service, order-service, payment-service, database
 """
 
+    client = _build_client()
+    model_name = _require_env("MODEL_NAME", MODEL_NAME)
+
     try:
         response = client.chat.completions.create(
-            model=_require_env("MODEL_NAME", MODEL_NAME),
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=50,
@@ -163,7 +165,7 @@ Allowed target values: api-gateway, auth-service, order-service, payment-service
         action = decision.get("action", "noop")
         target = decision.get("target", "api-gateway")
         return action, target
-    except (NotFoundError, APIError, Exception):
+    except (NotFoundError, APIError):
         return _fallback_action(state_text)
 
 

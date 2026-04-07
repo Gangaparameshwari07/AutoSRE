@@ -108,14 +108,14 @@ pip install -r requirements.txt
 ## Required Environment Variables
 - `API_BASE_URL`
 - `MODEL_NAME`
-- `HF_TOKEN`
+- `API_KEY`
 
 ## Configuration and Secrets
 AutoSRE reads runtime configuration from environment variables. Sensitive credentials are not hardcoded in the codebase.
 
 Recommended deployment practice:
 
-- store `HF_TOKEN` as a Hugging Face Space secret
+- store `API_KEY` as a Hugging Face Space secret
 - store `API_BASE_URL` and `MODEL_NAME` as Space variables
 - keep local credentials in `.env` only for development
 - never commit `.env` to version control
