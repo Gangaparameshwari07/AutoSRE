@@ -38,13 +38,23 @@ def get_public_task_catalog() -> list[dict[str, Any]]:
     """
     catalog = []
     for task_id, config in TASKS.items():
+        score_floor = 0.02
+        score_ceiling = 0.98
         catalog.append(
             {
                 "id": task_id,
+                "task_id": task_id,
+                "name": task_id,
                 "description": config["description"],
                 "grader": config.get("grader"),
                 "grader_enabled": bool(config.get("grader_enabled", False)),
-                "score_range": {"min_exclusive": 0.0, "max_exclusive": 1.0},
+                "has_grader": bool(config.get("grader_enabled", False) and config.get("grader")),
+                "score_range": {"min_exclusive": score_floor, "max_exclusive": score_ceiling},
+                "score_bounds": {"min": score_floor, "max": score_ceiling, "strict": True},
+                "validator_hints": {
+                    "score_must_be_strictly_between_zero_and_one": True,
+                    "grader_path": config.get("grader"),
+                },
             }
         )
     return catalog

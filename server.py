@@ -1,7 +1,8 @@
 import os
 from contextlib import asynccontextmanager
+from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from definitions import TASKS, get_public_task_catalog
 from environment import AutoSREEnv
@@ -52,6 +53,16 @@ def _serialize_step_result(result):
     return payload
 
 
+def _resolve_task_id(task_id: str | None, payload: dict[str, Any] | None) -> str:
+    body_task_id = None
+    if isinstance(payload, dict):
+        body_task_id = payload.get("task_id") or payload.get("task") or payload.get("id")
+    resolved = body_task_id or task_id or "task_3_hard"
+    if resolved not in TASKS:
+        raise HTTPException(status_code=400, detail=f"Unknown task_id: {resolved}")
+    return resolved
+
+
 def _render_dashboard_text():
     obs = env._get_observation()
     service_lines = [
@@ -72,27 +83,59 @@ def _render_dashboard_text():
 # --- HACKATHON MANDATORY ENDPOINTS ---
 
 @app.post("/reset")
-async def reset_endpoint(task_id: str = "task_3_hard"):
+async def reset_endpoint(task_id: str | None = None, payload: dict[str, Any] | None = Body(default=None)):
     """
     Called by the validator and the agent to start a fresh incident.
-    Defaulting to 'hard' because we want to test the best logic.
+    Supports both query-param and JSON-body task selection for compatibility.
     """
-    if task_id not in TASKS:
-        raise HTTPException(status_code=400, detail=f"Unknown task_id: {task_id}")
+    task_id = _resolve_task_id(task_id, payload)
     if proxy_env_present():
         warm_proxy_once()
     obs = _public_observation(env.reset(task_id=task_id))
     return {
         "observation": obs,
         "status": "initialized",
+        "task_id": task_id,
         "available_tasks": list(TASKS),
+        "graded_task_count": len([task for task in TASKS.values() if task.get("grader_enabled") and task.get("grader")]),
         "tasks": get_public_task_catalog(),
     }
 
 
 @app.get("/tasks")
 async def tasks_endpoint():
-    return {"tasks": get_public_task_catalog()}
+    tasks = get_public_task_catalog()
+    return {
+        "tasks": tasks,
+        "count": len(tasks),
+        "graded_task_count": len([task for task in tasks if task.get("has_grader")]),
+    }
+
+
+@app.get("/health")
+async def health_endpoint():
+    return {"status": "healthy"}
+
+
+@app.get("/metadata")
+async def metadata_endpoint():
+    return {
+        "name": "AutoSRE",
+        "description": "A professional microservices SRE simulation with cascading failures.",
+        "task_count": len(TASKS),
+        "graded_task_count": len([task for task in TASKS.values() if task.get("grader_enabled") and task.get("grader")]),
+    }
+
+
+@app.get("/schema")
+async def schema_endpoint():
+    action_schema = Action.model_json_schema() if hasattr(Action, "model_json_schema") else {}
+    observation_schema = type(env.state()).model_json_schema() if hasattr(type(env.state()), "model_json_schema") else {}
+    return {
+        "action": action_schema,
+        "observation": observation_schema,
+        "state": observation_schema,
+    }
 
 
 @app.get("/state")

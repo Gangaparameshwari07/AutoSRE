@@ -1,6 +1,13 @@
 from models import Observation, ServiceStatus
 from scoring import MIN_VALID_SCORE, clamp_open_interval
 
+
+TASK_BASELINES = {
+    "task_1_easy": 0.94,
+    "task_2_medium": 0.9,
+    "task_3_hard": 0.86,
+}
+
 def calculate_sre_score(obs: Observation, steps_taken: int) -> float:
     """
     The 'Final Exam' for the agent. Returns a value between 0.0 and 1.0.
@@ -48,4 +55,6 @@ def grade_submission(task_id: str, final_obs: Observation, steps: int) -> float:
     if final_obs.services["api-gateway"].status != ServiceStatus.RUNNING:
         return MIN_VALID_SCORE
 
-    return calculate_sre_score(final_obs, steps)
+    task_cap = TASK_BASELINES.get(task_id, 0.9)
+    task_score = min(task_cap, calculate_sre_score(final_obs, steps))
+    return clamp_open_interval(task_score)
