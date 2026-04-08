@@ -25,8 +25,8 @@ tasks:
       enabled: true
       path: graders.grade_submission
     score_range:
-      min_exclusive: 0.01
-      max_exclusive: 0.99
+      min_exclusive: 0.0
+      max_exclusive: 1.0
   - id: task_2_medium
     task_id: task_2_medium
     name: task_2_medium
@@ -38,8 +38,8 @@ tasks:
       enabled: true
       path: graders.grade_submission
     score_range:
-      min_exclusive: 0.01
-      max_exclusive: 0.99
+      min_exclusive: 0.0
+      max_exclusive: 1.0
   - id: task_3_hard
     task_id: task_3_hard
     name: task_3_hard
@@ -51,5 +51,5 @@ tasks:
       enabled: true
       path: graders.grade_submission
     score_range:
-      min_exclusive: 0.01
-      max_exclusive: 0.99
+      min_exclusive: 0.0
+      max_exclusive: 1.0

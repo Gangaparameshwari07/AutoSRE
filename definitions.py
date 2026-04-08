@@ -1,6 +1,5 @@
 from typing import Any
 from models import ServiceStatus, LogEntry
-from scoring import MAX_VALID_SCORE, MIN_VALID_SCORE
 
 # These are the 'Starting Conditions' for each level of the hackathon.
 # The environment will use these to break the system before the agent starts.
@@ -39,8 +38,8 @@ def get_public_task_catalog() -> list[dict[str, Any]]:
     """
     catalog = []
     for task_id, config in TASKS.items():
-        score_floor = MIN_VALID_SCORE
-        score_ceiling = MAX_VALID_SCORE
+        score_floor = 0.0
+        score_ceiling = 1.0
         catalog.append(
             {
                 "id": task_id,
