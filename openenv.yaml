@@ -13,3 +13,43 @@ runtime:
     vcpu: 2
     memory_gb: 8
   execution_timeout_minutes: 20
+tasks:
+  - id: task_1_easy
+    task_id: task_1_easy
+    name: task_1_easy
+    description: "Simple Service Failure: The 'payment-service' has crashed. Restart it to restore service."
+    grader: graders.grade_submission
+    grader_enabled: true
+    has_grader: true
+    grading:
+      enabled: true
+      path: graders.grade_submission
+    score_range:
+      min_exclusive: 0.01
+      max_exclusive: 0.99
+  - id: task_2_medium
+    task_id: task_2_medium
+    name: task_2_medium
+    description: "Resource Exhaustion: The 'auth-service' is experiencing a memory leak (95% RAM). Clear the cache and scale up to stabilize."
+    grader: graders.grade_submission
+    grader_enabled: true
+    has_grader: true
+    grading:
+      enabled: true
+      path: graders.grade_submission
+    score_range:
+      min_exclusive: 0.01
+      max_exclusive: 0.99
+  - id: task_3_hard
+    task_id: task_3_hard
+    name: task_3_hard
+    description: "Cascading Failure: The 'database' is overwhelmed with high latency (>800ms), causing the 'api-gateway' to crash. You MUST fix the Database FIRST."
+    grader: graders.grade_submission
+    grader_enabled: true
+    has_grader: true
+    grading:
+      enabled: true
+      path: graders.grade_submission
+    score_range:
+      min_exclusive: 0.01
+      max_exclusive: 0.99

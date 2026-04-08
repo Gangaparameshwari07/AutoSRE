@@ -19,5 +19,5 @@ COPY . .
 # Expose the port your FastAPI server uses
 EXPOSE 7860
 
-# The command to start your control plane on port 7860
-CMD ["python", "server.py"]
+# Start the canonical FastAPI app used for deployment
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]

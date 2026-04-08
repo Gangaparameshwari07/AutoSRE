@@ -159,6 +159,6 @@ class AutoSREEnv:
         return StepResult(
             observation=obs,
             reward=clamp_open_interval(obs.system_health_score),
-            done=(self.step_count >= 10 or self._raw_health_score() >= 1.0),
+            done=(self.step_count >= 10 or self._raw_health_score() >= 0.98),
             info={}
         )
