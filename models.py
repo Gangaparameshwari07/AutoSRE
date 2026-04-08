@@ -25,13 +25,13 @@ class LogEntry(BaseModel):
 class Observation(BaseModel):
     services: Dict[str, Service]
     recent_logs: List[LogEntry]
-    system_health_score: float
+    system_health_score: float = Field(gt=0.0, lt=1.0)
     alerts: List[str]
     task_description: str
 
 
 class Reward(BaseModel):
-    value: float = Field(ge=0.0, le=1.0)
+    value: float = Field(gt=0.0, lt=1.0)
     reason: str = ""
 
 class Action(BaseModel):

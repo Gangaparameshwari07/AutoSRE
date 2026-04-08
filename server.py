@@ -119,11 +119,22 @@ async def health_endpoint():
 
 @app.get("/metadata")
 async def metadata_endpoint():
+    tasks = get_public_task_catalog()
     return {
         "name": "AutoSRE",
         "description": "A professional microservices SRE simulation with cascading failures.",
         "task_count": len(TASKS),
         "graded_task_count": len([task for task in TASKS.values() if task.get("grader_enabled") and task.get("grader")]),
+        "tasks": tasks,
+        "graders": [
+            {
+                "task_id": task["task_id"],
+                "grader": task["grader"],
+                "grader_enabled": task["grader_enabled"],
+                "score_range": task["score_range"],
+            }
+            for task in tasks
+        ],
     }
 
 

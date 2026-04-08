@@ -27,6 +27,13 @@ tasks:
     score_range:
       min_exclusive: 0.0
       max_exclusive: 1.0
+    score_bounds:
+      min: 0.0
+      max: 1.0
+      strict: true
+    validator_hints:
+      score_must_be_strictly_between_zero_and_one: true
+      grader_path: graders.grade_submission
   - id: task_2_medium
     task_id: task_2_medium
     name: task_2_medium
@@ -40,6 +47,13 @@ tasks:
     score_range:
       min_exclusive: 0.0
       max_exclusive: 1.0
+    score_bounds:
+      min: 0.0
+      max: 1.0
+      strict: true
+    validator_hints:
+      score_must_be_strictly_between_zero_and_one: true
+      grader_path: graders.grade_submission
   - id: task_3_hard
     task_id: task_3_hard
     name: task_3_hard
@@ -53,3 +67,10 @@ tasks:
     score_range:
       min_exclusive: 0.0
       max_exclusive: 1.0
+    score_bounds:
+      min: 0.0
+      max: 1.0
+      strict: true
+    validator_hints:
+      score_must_be_strictly_between_zero_and_one: true
+      grader_path: graders.grade_submission
