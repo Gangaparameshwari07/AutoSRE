@@ -8,6 +8,8 @@ TASK_BASELINES = {
     "task_1_easy": 0.94,
     "task_2_medium": 0.9,
     "task_3_hard": 0.86,
+    "task_4_recovery": 0.92,
+    "task_5_edge_database_crash": 0.84,
 }
 
 
@@ -36,7 +38,7 @@ def _safe_score(score: float) -> float:
 
 def calculate_sre_score(obs: Observation | Mapping[str, Any], steps_taken: int) -> float:
     """
-    The 'Final Exam' for the agent. Returns a value between 0.0 and 1.0.
+    The 'Final Exam' for the agent. Returns a value strictly inside (0.0, 1.0).
     Based on three pillars: Availability, Performance, and Efficiency.
     """
     observation = _coerce_observation(obs)
@@ -85,7 +87,7 @@ def grade_submission(task_id: str, final_obs: Observation | Mapping[str, Any], s
     if observation is None:
         return MIN_VALID_SCORE
 
-    # If the API Gateway is still crashed, it's an automatic failure (0.0) 
+    # If the API Gateway is still crashed, return the minimum valid score
     # because the user can't even access the site.
     gateway = observation.services.get("api-gateway")
     if gateway is None or gateway.status != ServiceStatus.RUNNING:

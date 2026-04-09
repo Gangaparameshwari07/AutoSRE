@@ -99,10 +99,20 @@ def _extract_service_snapshot(state_text: str, service_name: str) -> dict[str, f
 
 
 def _fallback_action(state_text: str) -> tuple[str, str]:
-    database = _extract_service_snapshot(state_text, "database")
-    auth = _extract_service_snapshot(state_text, "auth-service")
-    payment = _extract_service_snapshot(state_text, "payment-service")
-    gateway = _extract_service_snapshot(state_text, "api-gateway")
+    service_names = [
+        "api-gateway",
+        "auth-service",
+        "order-service",
+        "payment-service",
+        "database",
+    ]
+    snapshots = {
+        service_name: _extract_service_snapshot(state_text, service_name)
+        for service_name in service_names
+    }
+    database = snapshots["database"]
+    auth = snapshots["auth-service"]
+    gateway = snapshots["api-gateway"]
 
     if database and (
         "degraded" in str(database["status"])
@@ -112,14 +122,21 @@ def _fallback_action(state_text: str) -> tuple[str, str]:
     ):
         return "scale_up", "database"
 
-    if payment and "crashed" in str(payment["status"]):
-        return "restart_service", "payment-service"
+    for service_name in ("payment-service", "order-service", "api-gateway", "auth-service"):
+        service = snapshots.get(service_name)
+        if service and "crashed" in str(service["status"]):
+            return "restart_service", service_name
 
     if auth and float(auth["mem"]) > 85:
         return "clear_cache", "auth-service"
 
     if auth and "degraded" in str(auth["status"]):
         return "scale_up", "auth-service"
+
+    for service_name in ("order-service", "payment-service", "api-gateway"):
+        service = snapshots.get(service_name)
+        if service and "degraded" in str(service["status"]):
+            return "restart_service", service_name
 
     if gateway and "crashed" in str(gateway["status"]):
         return "restart_service", "api-gateway"

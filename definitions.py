@@ -69,6 +69,19 @@ TASKS = {
         initial_state="degraded",
         metrics_override={"latency_ms": 850.0, "cpu_usage": 98.0},
     ),
+    "task_4_recovery": _build_task(
+        task_id="task_4_recovery",
+        description="Cross-Service Recovery: The 'order-service' has crashed after a bad rollout. Restore it quickly to bring the platform back to full health.",
+        target="order-service",
+        initial_state="crashed",
+    ),
+    "task_5_edge_database_crash": _build_task(
+        task_id="task_5_edge_database_crash",
+        description="Edge-Case Cascade: The 'database' has crashed under extreme load, which knocks the authentication and gateway path offline. Recover the database first to restore the platform.",
+        target="database",
+        initial_state="crashed",
+        metrics_override={"latency_ms": 900.0, "cpu_usage": 99.0},
+    ),
 }
 
 

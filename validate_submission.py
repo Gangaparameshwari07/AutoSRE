@@ -21,6 +21,8 @@ from server import app
 ROOT = Path(__file__).resolve().parent
 SERVER_URL = "http://127.0.0.1:7860"
 VALIDATOR_SERVER_PORT = "7861"
+EXPECTED_TASK_COUNT = 5
+EXPECTED_EDGE_SCORE = 0.01
 
 load_dotenv(ROOT / ".env")
 
@@ -28,6 +30,11 @@ load_dotenv(ROOT / ".env")
 def assert_true(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def env_value_present(name: str) -> bool:
+    value = os.getenv(name)
+    return bool(value and value.strip())
 
 
 def load_openenv() -> dict:
@@ -52,7 +59,7 @@ def check_openenv_yaml() -> None:
 
 
 def check_environment_variables() -> None:
-    present = [key for key in ("API_BASE_URL", "MODEL_NAME", "API_KEY") if os.getenv(key)]
+    present = [key for key in ("API_BASE_URL", "MODEL_NAME", "API_KEY") if env_value_present(key)]
     if present:
         print(f"[INFO] optional LLM environment variables detected: {', '.join(present)}")
     else:
@@ -74,7 +81,10 @@ def check_control_plane_endpoints() -> None:
     reset_response = client.post("/reset", params={"task_id": "task_1_easy"})
     assert_true(reset_response.status_code == 200, "POST /reset must return 200")
     reset_json = reset_response.json()
-    assert_true(len(reset_json.get("tasks", [])) >= 3, "POST /reset must expose at least 3 task descriptors")
+    assert_true(
+        len(reset_json.get("tasks", [])) == EXPECTED_TASK_COUNT,
+        f"POST /reset must expose exactly {EXPECTED_TASK_COUNT} task descriptors",
+    )
 
     state_response = client.get("/state")
     assert_true(state_response.status_code == 200, "GET /state must return 200")
@@ -85,7 +95,10 @@ def check_control_plane_endpoints() -> None:
     assert_true(tasks_response.status_code == 200, "GET /tasks must return 200")
     tasks_json = tasks_response.json()
     graded_tasks = [task for task in tasks_json.get("tasks", []) if task.get("grader_enabled")]
-    assert_true(len(graded_tasks) >= 3, "GET /tasks must expose at least 3 graded tasks")
+    assert_true(
+        len(graded_tasks) == EXPECTED_TASK_COUNT,
+        f"GET /tasks must expose exactly {EXPECTED_TASK_COUNT} graded tasks",
+    )
 
     step_response = client.post("/step", json={"action": "restart_service", "target": "payment-service"})
     assert_true(step_response.status_code == 200, "POST /step must return 200")
@@ -118,10 +131,41 @@ def solve_task_with_api(client: TestClient, task_id: str) -> tuple[Observation, 
     return final_observation, steps, score
 
 
+def check_edge_case_grades() -> None:
+    assert_true(
+        graders.grade_submission("task_1_easy", {}, 1) == EXPECTED_EDGE_SCORE,
+        f"Invalid observations must grade to {EXPECTED_EDGE_SCORE}",
+    )
+
+    env = AutoSREEnv()
+    observation = env.reset("task_1_easy")
+    gateway_crashed = Observation.model_validate(observation.model_dump())
+    gateway_crashed.services["api-gateway"].status = models.ServiceStatus.CRASHED
+    gateway_crashed.services["api-gateway"].error_rate = 1.0
+    gateway_crashed.services["api-gateway"].latency_ms = 300.0
+
+    assert_true(
+        graders.grade_submission("task_1_easy", gateway_crashed, 1) == EXPECTED_EDGE_SCORE,
+        f"A crashed gateway must grade to {EXPECTED_EDGE_SCORE}",
+    )
+
+    perfect_score = graders.calculate_sre_score(env.reset(), 1)
+    assert_true(
+        perfect_score == 0.99,
+        f"A fully healthy system must clamp to 0.99 instead of 1.0, got {perfect_score}",
+    )
+
+
 def check_tasks_and_graders() -> None:
-    assert_true(len(definitions.TASKS) >= 3, "At least 3 tasks are required")
+    assert_true(
+        len(definitions.TASKS) == EXPECTED_TASK_COUNT,
+        f"Exactly {EXPECTED_TASK_COUNT} tasks are required",
+    )
     graded_tasks = [task for task in definitions.TASKS.values() if task.get("grader_enabled") and task.get("grader")]
-    assert_true(len(graded_tasks) >= 3, "At least 3 tasks must declare graders")
+    assert_true(
+        len(graded_tasks) == EXPECTED_TASK_COUNT,
+        f"Exactly {EXPECTED_TASK_COUNT} tasks must declare graders",
+    )
     client = TestClient(app)
     for task_id in definitions.TASKS:
         _, _, score = solve_task_with_api(client, task_id)
@@ -193,6 +237,9 @@ def main() -> None:
 
     check_control_plane_endpoints()
     print("[PASS] control plane endpoints validated")
+
+    check_edge_case_grades()
+    print("[PASS] edge-case grader scores validated")
 
     check_tasks_and_graders()
     print("[PASS] tasks and graders validated")
