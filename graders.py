@@ -79,20 +79,45 @@ def calculate_sre_score(obs: Observation | Mapping[str, Any], steps_taken: int) 
     return _safe_score(final_score)
 
 
-def grade_submission(task_id: str, final_obs: Observation | Mapping[str, Any], steps: int) -> float:
+def grade_submission(*args, **kwargs) -> float:
     """
     This is the function the OpenEnv framework calls to get the final result.
     """
-    observation = _coerce_observation(final_obs)
-    if observation is None:
-        return MIN_VALID_SCORE
+    # Defensive argument parsing for varying platform calling conventions
+    task_id = "default"
+    final_obs = None
+    steps = 1
 
-    # If the API Gateway is still crashed, return the minimum valid score
-    # because the user can't even access the site.
-    gateway = observation.services.get("api-gateway")
-    if gateway is None or gateway.status != ServiceStatus.RUNNING:
-        return MIN_VALID_SCORE
+    if kwargs:
+        task_id = kwargs.get("task_id", task_id)
+        final_obs = kwargs.get("final_obs", kwargs.get("observation", final_obs))
+        steps = kwargs.get("steps", kwargs.get("steps_taken", steps))
+    
+    if args:
+        if len(args) == 1:
+            # If a single argument is passed, it's likely the observation
+            final_obs = args[0]
+        elif len(args) == 2:
+            # If two arguments are passed, it could be (task_id, observation) or (observation, steps)
+            if isinstance(args[0], str):
+                task_id, final_obs = args[0], args[1]
+            else:
+                final_obs, steps = args[0], args[1]
+        elif len(args) >= 3:
+            task_id, final_obs, steps = args[0], args[1], args[2]
 
-    task_cap = _safe_float(TASK_BASELINES.get(task_id, 0.9), 0.9)
-    task_score = min(task_cap, calculate_sre_score(observation, steps))
-    return _safe_score(task_score)
+    try:
+        observation = _coerce_observation(final_obs)
+        if observation is None:
+            return MIN_VALID_SCORE
+
+        gateway = observation.services.get("api-gateway")
+        if gateway is None or gateway.status != ServiceStatus.RUNNING:
+            return MIN_VALID_SCORE
+
+        task_cap = _safe_float(TASK_BASELINES.get(task_id, 0.9), 0.9)
+        task_score = min(task_cap, calculate_sre_score(observation, steps))
+        return _safe_score(task_score)
+    except Exception:
+        # If anything crashes, return a safe valid score instead of error.
+        return MIN_VALID_SCORE

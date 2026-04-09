@@ -58,11 +58,11 @@ def warm_proxy_once() -> bool:
             return _warmup_complete
 
         try:
-            client = build_llm_client(timeout=8.0)
+            client = build_llm_client(timeout=1.0)
             # Hit the proxy using only the injected base URL and API key.
             # This avoids depending on MODEL_NAME being present during validation.
-            client.models.list()
+            client.models.list(timeout=1.0)
             _warmup_complete = True
-        except (RuntimeError, NotFoundError, APIError, APIConnectionError, AuthenticationError, RateLimitError):
+        except Exception:
             return False
         return _warmup_complete

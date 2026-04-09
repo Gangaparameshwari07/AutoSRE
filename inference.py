@@ -37,8 +37,8 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
 
 
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
-    clamped = [_clamp(r) for r in rewards]
-    rewards_str = ",".join(f"{r:.2f}" for r in clamped)
+    final_rewards = [max(0.01, min(0.99, float(r))) for r in rewards]
+    rewards_str = ",".join(f"{r:.3f}" for r in final_rewards)
     print(
         f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
         flush=True,
