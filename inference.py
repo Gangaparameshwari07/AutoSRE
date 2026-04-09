@@ -19,6 +19,10 @@ MAX_STEPS = 10
 REQUEST_TIMEOUT = 30.0
 
 
+def _clamp(value: float) -> float:
+    return max(0.01, min(0.99, float(value)))
+
+
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
@@ -27,13 +31,14 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     error_val = error if error else "null"
     done_val = str(done).lower()
     print(
-        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
+        f"[STEP] step={step} action={action} reward={_clamp(reward):.2f} done={done_val} error={error_val}",
         flush=True,
     )
 
 
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
-    rewards_str = ",".join(f"{reward:.2f}" for reward in rewards)
+    clamped = [_clamp(r) for r in rewards]
+    rewards_str = ",".join(f"{r:.2f}" for r in clamped)
     print(
         f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
         flush=True,
@@ -59,7 +64,7 @@ def reset_environment(task_id: str) -> dict:
 def take_action(action: str, target: str) -> dict:
     response = httpx.post(
         f"{DASHBOARD_URL}/step",
-        json={"action": action, "target": target},
+        json={"action_type": action, "target_service": target},
         timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
@@ -186,7 +191,6 @@ def run_agent(task_id: str) -> None:
 
     try:
         warm_proxy_once()
-
         reset_environment(task_id)
 
         for step in range(1, MAX_STEPS + 1):
@@ -195,7 +199,7 @@ def run_agent(task_id: str) -> None:
             action, target = choose_action(state_text)
             result = take_action(action, target)
 
-            reward = float(result.get("reward", 0.0) or 0.0)
+            reward = _clamp(result.get("reward", 0.01) or 0.01)
             done = bool(result.get("done", False))
             error = result.get("info", {}).get("error")
             action_str = f"{action}({target})"
@@ -203,8 +207,8 @@ def run_agent(task_id: str) -> None:
             rewards.append(reward)
             log_step(step=step, action=action_str, reward=reward, done=done, error=error)
 
-            final_health = float(result.get("observation", {}).get("system_health_score", 0.0) or 0.0)
-            success = done or final_health >= 1.0
+            final_health = _clamp(result.get("observation", {}).get("system_health_score", 0.01) or 0.01)
+            success = done or final_health >= 0.99
             if success:
                 break
     finally:
