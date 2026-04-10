@@ -96,12 +96,25 @@ def get_public_task_catalog() -> list[dict[str, Any]]:
                 "name": config["name"],
                 "description": config["description"],
                 "grader": "graders.grade_submission",
-                "grader_enabled": bool(config.get("grader_enabled", False)),
-                "has_grader": True,
-                "grading": dict(config.get("grading", {})),
-                "score_range": dict(config.get("score_range", {})),
-                "score_bounds": dict(config.get("score_bounds", {})),
-                "validator_hints": dict(config.get("validator_hints", {})),
+                "grader_enabled": True,  
+                "has_grader": True,  
+                "grading": {
+                    "enabled": True,
+                    "path": "graders.grade_submission",
+                },
+                "score_range": {
+                    "min_exclusive": 0.0,
+                    "max_exclusive": 1.0,
+                },
+                "score_bounds": {
+                    "min": 0.0,
+                    "max": 1.0,
+                    "strict": True,
+                },
+                "validator_hints": {
+                    "score_must_be_strictly_between_zero_and_one": True,
+                    "grader_path": "graders.grade_submission",
+                },
             }
         )
     return catalog

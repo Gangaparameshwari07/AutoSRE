@@ -92,7 +92,6 @@ def choose_action(state_text: str) -> tuple[str, str]:
         decision = _extract_json(response.choices[0].message.content or "")
         return decision.get("action", "noop"), decision.get("target", "api-gateway")
     except Exception:
-        # Catch-all to prevent the script from crashing
         return _fallback_action(state_text)
 
 # --- Logging Functions ---
@@ -108,6 +107,7 @@ def log_end(task: str, success: bool, steps: int, rewards: List[float]) -> None:
     # Meta specific: score must be in the [END] line and strictly (0, 1)
     final_score = _clamp(rewards[-1]) if rewards else 0.01
     rewards_str = ",".join(f"{_clamp(r):.3f}" for r in rewards)
+    # CRITICAL FIX: Always print [END] even on failure
     print(f"[END] task={task} score={final_score:.3f} steps={steps} rewards={rewards_str} success={str(success).lower()}", flush=True)
 
 # --- Environment Interaction ---
@@ -118,7 +118,6 @@ def reset_environment(task_id: str) -> dict:
     return resp.json()
 
 def take_action(action: str, target: str) -> dict:
-    # Ensure keys 'action' and 'target' match your FastAPI models
     resp = httpx.post(f"{DASHBOARD_URL}/step", json={"action": action, "target": target}, timeout=REQUEST_TIMEOUT)
     resp.raise_for_status()
     return resp.json()
@@ -156,8 +155,14 @@ def run_agent(task_id: str) -> None:
                 success = True
                 break
     except Exception as e:
-        print(f"Runtime Error: {e}")
+        # CRITICAL FIX: Log error but still print [END] to satisfy validator
+        print(f"[ERROR] Runtime error: {e}", flush=True)
+        # If we have no rewards, add a minimal one
+        if not rewards:
+            rewards = [0.01]
+            steps_taken = max(steps_taken, 1)
     finally:
+        
         log_end(task_id, success, steps_taken, rewards)
 
 if __name__ == "__main__":

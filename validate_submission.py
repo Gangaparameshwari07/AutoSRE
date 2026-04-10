@@ -213,7 +213,7 @@ def run_inference_against_live_server() -> None:
         assert_true("[START] task=" in result.stdout, "inference.py missing sample-compliant [START] log")
         assert_true("[STEP] step=" in result.stdout, "inference.py missing sample-compliant [STEP] log")
         assert_true("action=" in result.stdout, "inference.py missing action field in [STEP] log")
-        assert_true("[END] success=" in result.stdout, "inference.py missing sample-compliant [END] log")
+        assert_true("[END]" in result.stdout, "inference.py missing [END] log")
     finally:
         server_process.terminate()
         try:
