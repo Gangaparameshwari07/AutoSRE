@@ -26,7 +26,28 @@ app = FastAPI(title="AutoSRE OpenEnv", lifespan=lifespan)
 
 
 def _clamp_public_score(score: float) -> float:
-    return clamp_open_interval(score)
+    # Forces score strictly between 0 and 1 (e.g., 0.01 to 0.99)
+    return clamp_open_interval(float(score))
+
+
+# --- NEW GRADER ENDPOINTS AS REQUESTED BY META ---
+
+@app.get("/grade/task_1_easy")
+async def grade_task_1():
+    score = _clamp_public_score(env.state().system_health_score)
+    return {"score": score, "reward": score}
+
+@app.get("/grade/task_2_medium")
+async def grade_task_2():
+    score = _clamp_public_score(env.state().system_health_score)
+    return {"score": score, "reward": score}
+
+@app.get("/grade/task_3_hard")
+async def grade_task_3():
+    score = _clamp_public_score(env.state().system_health_score)
+    return {"score": score, "reward": score}
+
+# ------------------------------------------------
 
 
 def _public_observation(observation):
@@ -57,7 +78,12 @@ def _resolve_task_id(task_id: str | None, payload: dict[str, Any] | None) -> str
     body_task_id = None
     if isinstance(payload, dict):
         body_task_id = payload.get("task_id") or payload.get("task") or payload.get("id")
+
     resolved = body_task_id or task_id or "task_3_hard"
+    if resolved == "task_1": resolved = "task_1_easy"
+    if resolved == "task_2": resolved = "task_2_medium"
+    if resolved == "task_3": resolved = "task_3_hard"
+
     if resolved not in TASKS:
         raise HTTPException(status_code=400, detail=f"Unknown task_id: {resolved}")
     return resolved
