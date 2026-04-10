@@ -121,13 +121,18 @@ async def reset_endpoint(task_id: str | None = None, payload: dict[str, Any] | N
     if proxy_env_present():
         warm_proxy_once()
     obs = _public_observation(env.reset(task_id=task_id))
+
+    tasks_list = get_public_task_catalog()
+    graded_count = len([task for task in tasks_list if task.get("has_grader")])
+
     return {
         "observation": obs,
         "status": "initialized",
         "task_id": task_id,
         "available_tasks": list(TASKS),
-        "graded_task_count": len([task for task in TASKS.values() if task.get("grader_enabled") and task.get("grader")]),
-        "tasks": get_public_task_catalog(),
+        "graded_task_count": graded_count,
+        "tasks": tasks_list,
+        "all_tasks_have_graders": graded_count == len(TASKS),
     }
 
 

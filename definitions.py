@@ -1,18 +1,12 @@
 from typing import Any
 from models import ServiceStatus, LogEntry
+import graders
 
-# These are the 'Starting Conditions' for each level of the hackathon.
-# The environment will use these to break the system before the agent starts.
-
-from typing import Any
-from models import ServiceStatus, LogEntry
-
-# --- CHANGE THIS ---
-# Instead of a Python path, use the API path the validator expects
-GRADER_PATH_TEMPLATE = "/grade/{task_id}" 
+GRADER_FUNCTION = graders.grade_submission
 
 SCORE_FLOOR = 0.0
 SCORE_CEILING = 1.0
+
 
 def _build_task(
     task_id: str,
@@ -21,9 +15,6 @@ def _build_task(
     initial_state: str,
     metrics_override: dict[str, float] | None = None,
 ) -> dict[str, Any]:
-    # Use the task_id to create a unique grader URL for each task
-    current_grader = GRADER_PATH_TEMPLATE.format(task_id=task_id)
-    
     task = {
         "id": task_id,
         "task_id": task_id,
@@ -31,12 +22,12 @@ def _build_task(
         "description": description,
         "target": target,
         "initial_state": initial_state,
-        "grader": current_grader, # Points to /grade/task_1_easy etc.
+        "grader": GRADER_FUNCTION,
         "grader_enabled": True,
         "has_grader": True,
         "grading": {
             "enabled": True,
-            "path": current_grader,
+            "path": "graders.grade_submission",
         },
         "score_range": {
             "min_exclusive": SCORE_FLOOR,
@@ -49,12 +40,13 @@ def _build_task(
         },
         "validator_hints": {
             "score_must_be_strictly_between_zero_and_one": True,
-            "grader_path": current_grader,
+            "grader_path": "graders.grade_submission",
         },
     }
     if metrics_override:
         task["metrics_override"] = metrics_override
     return task
+
 
 TASKS = {
     "task_1_easy": _build_task(
@@ -94,10 +86,7 @@ TASKS = {
 
 
 def get_public_task_catalog() -> list[dict[str, Any]]:
-    """
-    Return serializable task metadata so hosted validators can discover
-    graded tasks without importing local modules.
-    """
+    """Return serializable task metadata so hosted validators can discover graded tasks."""
     catalog = []
     for task_id, config in TASKS.items():
         catalog.append(
@@ -106,9 +95,9 @@ def get_public_task_catalog() -> list[dict[str, Any]]:
                 "task_id": config["task_id"],
                 "name": config["name"],
                 "description": config["description"],
-                "grader": config.get("grader"),
+                "grader": "graders.grade_submission",
                 "grader_enabled": bool(config.get("grader_enabled", False)),
-                "has_grader": bool(config.get("has_grader", False)),
+                "has_grader": True,
                 "grading": dict(config.get("grading", {})),
                 "score_range": dict(config.get("score_range", {})),
                 "score_bounds": dict(config.get("score_bounds", {})),
@@ -117,26 +106,22 @@ def get_public_task_catalog() -> list[dict[str, Any]]:
         )
     return catalog
 
-# This helper helps the Environment.reset() function set up the 'Chaos'
+
 def apply_task_scenario(env, task_id: str):
     """Injects the specific failure into our AutoSRE environment."""
     if task_id not in TASKS:
         return
-    
+
     config = TASKS[task_id]
     target = config["target"]
-    
-    # 1. Apply the primary failure
-    service = env.services[target]
+
     status_map = {"crashed": ServiceStatus.CRASHED, "degraded": ServiceStatus.DEGRADED, "running": ServiceStatus.RUNNING}
-    service.status = status_map.get(config["initial_state"], ServiceStatus.DEGRADED)
-    
-    # 2. If there are specific metric spikes (like 95% RAM), apply them here
+    env.services[target].status = status_map.get(config["initial_state"], ServiceStatus.DEGRADED)
+
     if "metrics_override" in config:
         for metric, value in config["metrics_override"].items():
-            setattr(service, metric, value)
-            
-    # 3. Add a realistic log entry so the agent has a 'clue'
+            setattr(env.services[target], metric, value)
+
     env.logs.append(LogEntry(
         timestamp="00:01",
         level="CRITICAL" if config["initial_state"] == "crashed" else "WARN",
