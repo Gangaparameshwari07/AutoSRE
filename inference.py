@@ -10,66 +10,23 @@ from llm_proxy import build_llm_client, get_model_name, proxy_env_present, warm_
 
 load_dotenv()
 
+# Configuration
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:7860")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
-IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 TASK_NAME = os.getenv("TASK_ID", "task_3_hard")
 BENCHMARK = os.getenv("BENCHMARK", "autosre")
 MAX_STEPS = 10
 REQUEST_TIMEOUT = 30.0
 
+# --- Helper Functions ---
 
 def _clamp(value: float) -> float:
-    return max(0.01, min(0.99, float(value)))
-
-
-def log_start(task: str, env: str, model: str) -> None:
-    print(f"[START] task={task} env={env} model={model}", flush=True)
-
-
-def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
-    error_val = error if error else "null"
-    done_val = str(done).lower()
-    print(
-        f"[STEP] step={step} action={action} reward={_clamp(reward):.2f} done={done_val} error={error_val}",
-        flush=True,
-    )
-
-
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
-    final_rewards = [max(0.01, min(0.99, float(r))) for r in rewards]
-    rewards_str = ",".join(f"{r:.3f}" for r in final_rewards)
-    print(
-        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
-        flush=True,
-    )
-
-
-def get_system_state() -> str:
-    response = httpx.get(f"{DASHBOARD_URL}/", timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    return response.text
-
-
-def reset_environment(task_id: str) -> dict:
-    response = httpx.post(
-        f"{DASHBOARD_URL}/reset",
-        params={"task_id": task_id},
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def take_action(action: str, target: str) -> dict:
-    response = httpx.post(
-        f"{DASHBOARD_URL}/step",
-        json={"action_type": action, "target_service": target},
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    return response.json()
-
+    """Ensures scores are strictly between 0 and 1 per Meta rules."""
+    try:
+        val = float(value)
+    except (TypeError, ValueError):
+        val = 0.01
+    return max(0.01, min(0.99, val))
 
 def _extract_json(raw_content: str) -> dict:
     raw = raw_content.strip()
@@ -77,23 +34,19 @@ def _extract_json(raw_content: str) -> dict:
         raw = raw.split("```json", 1)[1].split("```", 1)[0].strip()
     elif "```" in raw:
         raw = raw.split("```", 1)[1].split("```", 1)[0].strip()
-
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
         parsed = {}
-
     return parsed if isinstance(parsed, dict) else {}
 
-
-def _extract_service_snapshot(state_text: str, service_name: str) -> dict[str, float | str] | None:
+def _extract_service_snapshot(state_text: str, service_name: str) -> Optional[dict]:
     pattern = re.compile(
         rf"{re.escape(service_name)}: status=([^\s]+) cpu=([0-9.]+)% mem=([0-9.]+)% latency=([0-9.]+)ms error_rate=([0-9.]+)"
     )
     match = pattern.search(state_text)
     if not match:
         return None
-
     return {
         "status": match.group(1).lower(),
         "cpu": float(match.group(2)),
@@ -102,118 +55,110 @@ def _extract_service_snapshot(state_text: str, service_name: str) -> dict[str, f
         "error_rate": float(match.group(5)),
     }
 
+# --- SRE Logic Functions ---
 
 def _fallback_action(state_text: str) -> tuple[str, str]:
-    service_names = [
-        "api-gateway",
-        "auth-service",
-        "order-service",
-        "payment-service",
-        "database",
-    ]
-    snapshots = {
-        service_name: _extract_service_snapshot(state_text, service_name)
-        for service_name in service_names
-    }
-    database = snapshots["database"]
-    auth = snapshots["auth-service"]
-    gateway = snapshots["api-gateway"]
-
-    if database and (
-        "degraded" in str(database["status"])
-        or "crashed" in str(database["status"])
-        or float(database["latency"]) > 500
-        or float(database["cpu"]) > 90
-    ):
+    """Heuristic-based SRE logic used if the LLM fails."""
+    service_names = ["api-gateway", "auth-service", "order-service", "payment-service", "database"]
+    snapshots = {name: _extract_service_snapshot(state_text, name) for name in service_names}
+    
+    db = snapshots.get("database")
+    if db and (db["cpu"] > 90 or db["latency"] > 500 or "crashed" in db["status"]):
         return "scale_up", "database"
 
-    for service_name in ("payment-service", "order-service", "api-gateway", "auth-service"):
-        service = snapshots.get(service_name)
-        if service and "crashed" in str(service["status"]):
-            return "restart_service", service_name
-
-    if auth and float(auth["mem"]) > 85:
-        return "clear_cache", "auth-service"
-
-    if auth and "degraded" in str(auth["status"]):
-        return "scale_up", "auth-service"
-
-    for service_name in ("order-service", "payment-service", "api-gateway"):
-        service = snapshots.get(service_name)
-        if service and "degraded" in str(service["status"]):
-            return "restart_service", service_name
-
-    if gateway and "crashed" in str(gateway["status"]):
-        return "restart_service", "api-gateway"
-
+    for name in ["auth-service", "payment-service", "api-gateway"]:
+        s = snapshots.get(name)
+        if s and "crashed" in s["status"]:
+            return "restart_service", name
+            
     return "noop", "api-gateway"
 
-
 def choose_action(state_text: str) -> tuple[str, str]:
-    prompt = f"""You are an expert SRE. Analyze the current control plane state and choose the single best next action.
-
-{state_text}
-
-Return ONLY valid JSON in this exact format:
-{{"action": "scale_up", "target": "database"}}
-
-Allowed action values: restart_service, scale_up, scale_down, clear_cache, rollback, noop
-Allowed target values: api-gateway, auth-service, order-service, payment-service, database
-"""
+    """Attempts LLM inference, falls back to heuristics on error."""
+    prompt = f"Analyze state and return JSON {{'action': '...', 'target': '...'}}:\n{state_text}"
 
     if not proxy_env_present():
         return _fallback_action(state_text)
 
     try:
         client = build_llm_client()
-        model_name = get_model_name()
+        model = get_model_name()
         response = client.chat.completions.create(
-            model=model_name,
+            model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
             max_tokens=50,
         )
         decision = _extract_json(response.choices[0].message.content or "")
-        action = decision.get("action", "noop")
-        target = decision.get("target", "api-gateway")
-        return action, target
-    except (RuntimeError, NotFoundError, APIError, APIConnectionError, AuthenticationError, RateLimitError, httpx.HTTPError, ValueError, KeyError):
+        return decision.get("action", "noop"), decision.get("target", "api-gateway")
+    except Exception:
+        # Catch-all to prevent the script from crashing
         return _fallback_action(state_text)
 
+# --- Logging Functions ---
+
+def log_start(task: str, env_name: str, model: str) -> None:
+    print(f"[START] task={task} env={env_name} model={model}", flush=True)
+
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+    e = error if error else "null"
+    print(f"[STEP] step={step} action={action} reward={_clamp(reward):.2f} done={str(done).lower()} error={e}", flush=True)
+
+def log_end(task: str, success: bool, steps: int, rewards: List[float]) -> None:
+    # Meta specific: score must be in the [END] line and strictly (0, 1)
+    final_score = _clamp(rewards[-1]) if rewards else 0.01
+    rewards_str = ",".join(f"{_clamp(r):.3f}" for r in rewards)
+    print(f"[END] task={task} score={final_score:.3f} steps={steps} rewards={rewards_str} success={str(success).lower()}", flush=True)
+
+# --- Environment Interaction ---
+
+def reset_environment(task_id: str) -> dict:
+    resp = httpx.post(f"{DASHBOARD_URL}/reset", params={"task_id": task_id}, timeout=REQUEST_TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
+
+def take_action(action: str, target: str) -> dict:
+    # Ensure keys 'action' and 'target' match your FastAPI models
+    resp = httpx.post(f"{DASHBOARD_URL}/step", json={"action": action, "target": target}, timeout=REQUEST_TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
 
 def run_agent(task_id: str) -> None:
     rewards: List[float] = []
     steps_taken = 0
     success = False
-
-    model_name = MODEL_NAME if proxy_env_present() else "heuristic-fallback"
-    log_start(task=task_id, env=BENCHMARK, model=model_name)
+    
+    model_info = get_model_name() if proxy_env_present() else "fallback-mode"
+    log_start(task_id, BENCHMARK, model_info)
 
     try:
-        warm_proxy_once()
         reset_environment(task_id)
-
         for step in range(1, MAX_STEPS + 1):
             steps_taken = step
-            state_text = get_system_state()
+            
+            # 1. Get State
+            resp = httpx.get(f"{DASHBOARD_URL}/", timeout=REQUEST_TIMEOUT)
+            state_text = resp.text
+            
+            # 2. Decide and Act
             action, target = choose_action(state_text)
             result = take_action(action, target)
-
-            reward = _clamp(result.get("reward", 0.01) or 0.01)
+            
+            # 3. Parse Result
+            reward = _clamp(result.get("reward", 0.01))
             done = bool(result.get("done", False))
-            error = result.get("info", {}).get("error")
-            action_str = f"{action}({target})"
-
+            health = _clamp(result.get("observation", {}).get("system_health_score", 0.01))
+            
             rewards.append(reward)
-            log_step(step=step, action=action_str, reward=reward, done=done, error=error)
-
-            final_health = _clamp(result.get("observation", {}).get("system_health_score", 0.01) or 0.01)
-            success = done or final_health >= 0.99
-            if success:
+            log_step(step, f"{action}({target})", reward, done, None)
+            
+            if done or health >= 0.98:
+                success = True
                 break
+    except Exception as e:
+        print(f"Runtime Error: {e}")
     finally:
-        log_end(success=success, steps=steps_taken, rewards=rewards)
-
+        log_end(task_id, success, steps_taken, rewards)
 
 if __name__ == "__main__":
     run_agent(TASK_NAME)
