@@ -82,25 +82,25 @@ def _render_dashboard_text():
 
 # --- HACKATHON MANDATORY ENDPOINTS ---
 
-@app.post("/reset")
-async def reset_endpoint(task_id: str | None = None, payload: dict[str, Any] | None = Body(default=None)):
-    """
-    Called by the validator and the agent to start a fresh incident.
-    Supports both query-param and JSON-body task selection for compatibility.
-    """
-    task_id = _resolve_task_id(task_id, payload)
-    if proxy_env_present():
-        warm_proxy_once()
-    obs = _public_observation(env.reset(task_id=task_id))
+@app.get("/debug")
+async def debug_endpoint():
+    """Debug endpoint to check grader status"""
+    from definitions import get_public_task_catalog
+    tasks = get_public_task_catalog()
     return {
-        "observation": obs,
-        "status": "initialized",
-        "task_id": task_id,
-        "available_tasks": list(TASKS),
-        "graded_task_count": len([task for task in TASKS.values() if task.get("grader_enabled") and task.get("grader")]),
-        "tasks": get_public_task_catalog(),
+        "task_count": len(tasks),
+        "graded_tasks": [t for t in tasks if t.get("grader_enabled")],
+        "tasks": tasks
     }
 
+@app.post("/reset")
+async def reset_endpoint(task_id: str = "task_3_hard"):
+    obs = env.reset(task_id=task_id)
+    tasks_list = get_public_task_catalog()
+    return {
+        "observation": obs,
+        "graded_task_count": len([t for t in tasks_list if t.get("grader_enabled")]),
+        "tasks": tasks_list,
 
 @app.get("/tasks")
 async def tasks_endpoint():

@@ -1,12 +1,8 @@
 name: "AutoSRE"
 version: "1.0.0"
-description: "A professional Microservices SRE simulation with cascading failures."
+description: "Microservice SRE simulation with cascading failures"
 entry_point: "server:app"
 sdk_version: "openenv-0.1.0"
-metadata:
-  category: "DevOps/SRE"
-  difficulty: "Hard"
-  tags: ["Microservices", "Incident Response", "Control Plane"]
 runtime:
   port: 7860
   resource_limits:
@@ -15,106 +11,17 @@ runtime:
   execution_timeout_minutes: 20
 tasks:
   - id: task_1_easy
-    task_id: task_1_easy
-    name: task_1_easy
-    description: "Simple Service Failure: The 'payment-service' has crashed. Restart it to restore service."
     grader: "graders.grade_submission"
     grader_enabled: true
-    has_grader: true
-    grading:
-      enabled: true
-      path: "graders.grade_submission"
-    score_range:
-      min_exclusive: 0.0
-      max_exclusive: 1.0
-    score_bounds:
-      min: 0.0
-      max: 1.0
-      strict: true
-    validator_hints:
-      score_must_be_strictly_between_zero_and_one: true
-      grader_path: "graders.grade_submission"
-
   - id: task_2_medium
-    task_id: task_2_medium
-    name: task_2_medium
-    description: "Resource Exhaustion: The 'auth-service' is experiencing a memory leak (95% RAM). Clear the cache and scale up to stabilize."
     grader: "graders.grade_submission"
     grader_enabled: true
-    has_grader: true
-    grading:
-      enabled: true
-      path: "graders.grade_submission"
-    score_range:
-      min_exclusive: 0.0
-      max_exclusive: 1.0
-    score_bounds:
-      min: 0.0
-      max: 1.0
-      strict: true
-    validator_hints:
-      score_must_be_strictly_between_zero_and_one: true
-      grader_path: "graders.grade_submission"
-
   - id: task_3_hard
-    task_id: task_3_hard
-    name: task_3_hard
-    description: "Cascading Failure: The 'database' is overwhelmed with high latency (>800ms), causing the 'api-gateway' to crash. You MUST fix the Database FIRST."
     grader: "graders.grade_submission"
     grader_enabled: true
-    has_grader: true
-    grading:
-      enabled: true
-      path: "graders.grade_submission"
-    score_range:
-      min_exclusive: 0.0
-      max_exclusive: 1.0
-    score_bounds:
-      min: 0.0
-      max: 1.0
-      strict: true
-    validator_hints:
-      score_must_be_strictly_between_zero_and_one: true
-      grader_path: "graders.grade_submission"
-
   - id: task_4_recovery
-    task_id: task_4_recovery
-    name: task_4_recovery
-    description: "Cross-Service Recovery: The 'order-service' has crashed after a bad rollout. Restore it quickly to bring the platform back to full health."
     grader: "graders.grade_submission"
     grader_enabled: true
-    has_grader: true
-    grading:
-      enabled: true
-      path: "graders.grade_submission"
-    score_range:
-      min_exclusive: 0.0
-      max_exclusive: 1.0
-    score_bounds:
-      min: 0.0
-      max: 1.0
-      strict: true
-    validator_hints:
-      score_must_be_strictly_between_zero_and_one: true
-      grader_path: "graders.grade_submission"
-
   - id: task_5_edge_database_crash
-    task_id: task_5_edge_database_crash
-    name: task_5_edge_database_crash
-    description: "Edge-Case Cascade: The 'database' has crashed under extreme load, which knocks the authentication and gateway path offline. Recover the database first to restore the platform."
     grader: "graders.grade_submission"
     grader_enabled: true
-    has_grader: true
-    grading:
-      enabled: true
-      path: "graders.grade_submission"
-    score_range:
-      min_exclusive: 0.0
-      max_exclusive: 1.0
-    score_bounds:
-      min: 0.0
-      max: 1.0
-      strict: true
-    validator_hints:
-      score_must_be_strictly_between_zero_and_one: true
-      grader_path: "graders.grade_submission"
