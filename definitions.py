@@ -4,10 +4,15 @@ from models import ServiceStatus, LogEntry
 # These are the 'Starting Conditions' for each level of the hackathon.
 # The environment will use these to break the system before the agent starts.
 
-GRADER_PATH = "graders.grade_submission"
+from typing import Any
+from models import ServiceStatus, LogEntry
+
+# --- CHANGE THIS ---
+# Instead of a Python path, use the API path the validator expects
+GRADER_PATH_TEMPLATE = "/grade/{task_id}" 
+
 SCORE_FLOOR = 0.0
 SCORE_CEILING = 1.0
-
 
 def _build_task(
     task_id: str,
@@ -16,6 +21,9 @@ def _build_task(
     initial_state: str,
     metrics_override: dict[str, float] | None = None,
 ) -> dict[str, Any]:
+    # Use the task_id to create a unique grader URL for each task
+    current_grader = GRADER_PATH_TEMPLATE.format(task_id=task_id)
+    
     task = {
         "id": task_id,
         "task_id": task_id,
@@ -23,12 +31,12 @@ def _build_task(
         "description": description,
         "target": target,
         "initial_state": initial_state,
-        "grader": GRADER_PATH,
+        "grader": current_grader, # Points to /grade/task_1_easy etc.
         "grader_enabled": True,
         "has_grader": True,
         "grading": {
             "enabled": True,
-            "path": GRADER_PATH,
+            "path": current_grader,
         },
         "score_range": {
             "min_exclusive": SCORE_FLOOR,
@@ -41,7 +49,7 @@ def _build_task(
         },
         "validator_hints": {
             "score_must_be_strictly_between_zero_and_one": True,
-            "grader_path": GRADER_PATH,
+            "grader_path": current_grader,
         },
     }
     if metrics_override:
