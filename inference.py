@@ -25,8 +25,8 @@ def _clamp(value: float) -> float:
     try:
         val = float(value)
     except (TypeError, ValueError):
-        val = 0.01
-    return max(0.01, min(0.99, val))
+        val = 0.02
+    return max(0.02, min(0.98, val))
 
 def _extract_json(raw_content: str) -> dict:
     raw = raw_content.strip()
@@ -104,10 +104,8 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     print(f"[STEP] step={step} action={action} reward={_clamp(reward):.2f} done={str(done).lower()} error={e}", flush=True)
 
 def log_end(task: str, success: bool, steps: int, rewards: List[float]) -> None:
-    # Meta specific: score must be in the [END] line and strictly (0, 1)
-    final_score = _clamp(rewards[-1]) if rewards else 0.01
-    rewards_str = ",".join(f"{_clamp(r):.3f}" for r in rewards)
-    # CRITICAL FIX: Always print [END] even on failure
+    final_score = max(0.02, min(0.98, rewards[-1] if rewards else 0.05))
+    rewards_str = ",".join(f"{max(0.02, min(0.98, r)):.3f}" for r in rewards)
     print(f"[END] task={task} score={final_score:.3f} steps={steps} rewards={rewards_str} success={str(success).lower()}", flush=True)
 
 # --- Environment Interaction ---
@@ -159,7 +157,7 @@ def run_agent(task_id: str) -> None:
         print(f"[ERROR] Runtime error: {e}", flush=True)
         # If we have no rewards, add a minimal one
         if not rewards:
-            rewards = [0.01]
+            rewards = [0.02]
             steps_taken = max(steps_taken, 1)
     finally:
         

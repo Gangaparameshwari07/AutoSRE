@@ -1,5 +1,5 @@
-MIN_VALID_SCORE = 0.01
-MAX_VALID_SCORE = 0.99
+MIN_VALID_SCORE = 0.02
+MAX_VALID_SCORE = 0.98
 
 
 def clamp_open_interval(score: float) -> float:
