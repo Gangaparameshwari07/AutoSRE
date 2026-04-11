@@ -1,5 +1,5 @@
 name: "AutoSRE"
-version: "1.0.0"
+version: "2.0.0"
 description: "Microservice SRE simulation with cascading failures"
 entry_point: "server:app"
 sdk_version: "openenv-0.1.0"
@@ -9,19 +9,29 @@ runtime:
     vcpu: 2
     memory_gb: 8
   execution_timeout_minutes: 20
+
 tasks:
   - id: task_1_easy
     grader: "graders.grade_submission"
     grader_enabled: true
+    has_grader: true
+    
   - id: task_2_medium
     grader: "graders.grade_submission"
     grader_enabled: true
+    has_grader: true
+    
   - id: task_3_hard
     grader: "graders.grade_submission"
     grader_enabled: true
+    has_grader: true
+    
   - id: task_4_recovery
     grader: "graders.grade_submission"
     grader_enabled: true
+    has_grader: true
+    
   - id: task_5_edge_database_crash
     grader: "graders.grade_submission"
     grader_enabled: true
+    has_grader: true
