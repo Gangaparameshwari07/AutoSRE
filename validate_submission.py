@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
 import definitions
-import graders
+import server.graders as graders
 import inference
 import models
 from environment import AutoSREEnv

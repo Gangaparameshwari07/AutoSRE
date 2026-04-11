@@ -1,8 +1,7 @@
 from typing import Any
 from models import ServiceStatus, LogEntry
 
-# Force import graders module
-import graders
+
 
 SCORE_FLOOR = 0.0
 SCORE_CEILING = 1.0
