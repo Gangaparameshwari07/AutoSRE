@@ -126,3 +126,24 @@ def grade_submission(*args, **kwargs) -> float:
         
     except Exception:
         return 0.01
+
+
+class EasyGrader:
+    def grade(self, observation):
+        return grade_submission("task_1_easy", observation, 10)
+
+class MediumGrader:
+    def grade(self, observation):
+        return grade_submission("task_2_medium", observation, 10)
+
+class HardGrader:
+    def grade(self, observation):
+        return grade_submission("task_3_hard", observation, 10)
+
+class RecoveryGrader:
+    def grade(self, observation):
+        return grade_submission("task_4_recovery", observation, 10)
+
+class EdgeGrader:
+    def grade(self, observation):
+        return grade_submission("task_5_edge_database_crash", observation, 10)
