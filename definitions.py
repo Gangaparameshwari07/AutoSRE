@@ -7,6 +7,14 @@ import graders
 SCORE_FLOOR = 0.0
 SCORE_CEILING = 1.0
 
+TASK_GRADER_PATHS = {
+    "task_1_easy": "server.graders:EasyGrader",
+    "task_2_medium": "server.graders:MediumGrader",
+    "task_3_hard": "server.graders:HardGrader",
+    "task_4_recovery": "server.graders:RecoveryGrader",
+    "task_5_edge_database_crash": "server.graders:EdgeGrader",
+}
+
 def _build_task(
     task_id: str,
     description: str,
@@ -22,12 +30,12 @@ def _build_task(
         "description": description,
         "target": target,
         "initial_state": initial_state,
-        "grader": "graders.grade_submission",  # String path for serialization
+        "grader": TASK_GRADER_PATHS[task_id],
         "grader_enabled": True,  # CRITICAL: Must be True
         "has_grader": True,  # CRITICAL: Must be True
         "grading": {
             "enabled": True,
-            "path": "graders.grade_submission",
+            "path": TASK_GRADER_PATHS[task_id],
         },
         "score_range": {
             "min_exclusive": SCORE_FLOOR,
@@ -40,7 +48,7 @@ def _build_task(
         },
         "validator_hints": {
             "score_must_be_strictly_between_zero_and_one": True,
-            "grader_path": "graders.grade_submission",
+            "grader_path": TASK_GRADER_PATHS[task_id],
         },
     }
     if metrics_override:
@@ -92,12 +100,12 @@ def get_public_task_catalog() -> list[dict[str, Any]]:
             "task_id": config["task_id"],
             "name": config["name"],
             "description": config["description"],
-            "grader": "graders.grade_submission",
+            "grader": config["grader"],
             "grader_enabled": True,  # FORCED to True
             "has_grader": True,  # FORCED to True
             "grading": {
                 "enabled": True,
-                "path": "graders.grade_submission",
+                "path": config["grader"],
             },
             "score_range": {
                 "min_exclusive": 0.0,
