@@ -7,11 +7,11 @@ SCORE_FLOOR = 0.0
 SCORE_CEILING = 1.0
 
 TASK_GRADER_PATHS = {
-    "task_1_easy": "server.easy_task:grade_easy",
-    "task_2_medium": "server.medium_task:grade_medium",
-    "task_3_hard": "server.hard_task:grade_hard",
-    "task_4_recovery": "server.recovery_task:grade_recovery",
-    "task_5_edge_database_crash": "server.edge_task:grade_edge",
+    "task_1_easy": "tasks.easy_task:grade_easy",
+    "task_2_medium": "tasks.medium_task:grade_medium",
+    "task_3_hard": "tasks.hard_task:grade_hard",
+    "task_4_recovery": "tasks.recovery_task:grade_recovery",
+    "task_5_edge_database_crash": "tasks.edge_task:grade_edge",
 }
 
 def _build_task(
