@@ -10,11 +10,9 @@ from llm_proxy import proxy_env_present, warm_proxy_once
 from models import Action
 from scoring import clamp_open_interval
 from .graders import (
-    EdgeDatabaseCrashGrader,
     EasyGrader,
     HardGrader,
     MediumGrader,
-    RecoveryGrader,
 )
 import uvicorn
 
@@ -159,15 +157,6 @@ async def grade_task_2_medium():
 @app.get("/grade/task_3_hard")
 async def grade_task_3_hard():
     return _grade_current_state(HardGrader)
-
-@app.get("/grade/task_4_recovery")
-async def grade_task_4_recovery():
-    return _grade_current_state(RecoveryGrader)
-
-@app.get("/grade/task_5_edge_database_crash")
-async def grade_task_5_edge_database_crash():
-    return _grade_current_state(EdgeDatabaseCrashGrader)
-
 
 # VALIDATE ENDPOINT
 @app.get("/validate")
