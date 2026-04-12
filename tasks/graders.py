@@ -6,7 +6,7 @@ from scoring import clamp_open_interval
 
 
 def _fallback_grade(_: Any = None) -> float:
-    return 0.02
+    return 0.01
 
 
 try:
@@ -24,7 +24,6 @@ try:
 except ImportError:
     grade_medium = _fallback_grade
 
-
 class BaseTaskGrader:
     score_fn: Callable[[Any], float]
 
@@ -32,7 +31,7 @@ class BaseTaskGrader:
         try:
             raw_score = float(self.score_fn(observation))
         except Exception:
-            raw_score = 0.02
+            raw_score = 0.01
         return clamp_open_interval(raw_score)
 
     def result(self, observation: Any = None) -> dict[str, float]:

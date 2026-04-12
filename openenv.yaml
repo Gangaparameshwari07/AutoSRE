@@ -47,3 +47,4 @@ tasks:
     score_range:
       min_exclusive: 0.0
       max_exclusive: 1.0
+

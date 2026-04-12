@@ -1,6 +1,6 @@
 def grade_medium(observation):
     """Grade medium task - auth-service memory leak"""
-    if observation is None:
+    if observation is None or not observation:
         return 0.01
     
     services = observation.get('services', {}) if isinstance(observation, dict) else observation.services

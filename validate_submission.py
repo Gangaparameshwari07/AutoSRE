@@ -21,7 +21,7 @@ from server import app
 ROOT = Path(__file__).resolve().parent
 SERVER_URL = "http://127.0.0.1:7860"
 VALIDATOR_SERVER_PORT = "7861"
-EXPECTED_TASK_COUNT = 5
+EXPECTED_TASK_COUNT = 3
 EXPECTED_EDGE_SCORE = 0.01
 
 load_dotenv(ROOT / ".env")

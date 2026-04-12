@@ -20,22 +20,11 @@ try:
 except ImportError:
     grade_hard = _fallback_grade
 
-try:
-    from .recovery_task import grade_recovery
-except ImportError:
-    grade_recovery = _fallback_grade
-
-try:
-    from .edge_task import grade_edge
-except ImportError:
-    grade_edge = _fallback_grade
 
 __all__ = [
     'grade_easy',
     'grade_medium',
     'grade_hard',
-    'grade_recovery',
-    'grade_edge',
     'EasyGrader',
     'MediumGrader',
     'HardGrader',

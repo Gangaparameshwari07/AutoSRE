@@ -1,6 +1,6 @@
 def grade_hard(observation):
     """Grade hard task - database cascading failure"""
-    if observation is None:
+    if not observation:
         return 0.01
     
     services = observation.get('services', {}) if isinstance(observation, dict) else observation.services
