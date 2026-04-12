@@ -9,6 +9,13 @@ from environment import AutoSREEnv
 from llm_proxy import proxy_env_present, warm_proxy_once
 from models import Action
 from scoring import clamp_open_interval
+from .graders import (
+    EdgeDatabaseCrashGrader,
+    EasyGrader,
+    HardGrader,
+    MediumGrader,
+    RecoveryGrader,
+)
 import uvicorn
 
 env = AutoSREEnv()
@@ -51,6 +58,12 @@ def _serialize_step_result(result):
     if "reward" in payload:
         payload["reward"] = _clamp_public_score(payload["reward"])
     return payload
+
+
+def _grade_current_state(grader_cls):
+    grader = grader_cls()
+    score = grader.grade(env.state())
+    return {"score": score, "reward": score}
 
 
 def _resolve_task_id(task_id: str | None, payload: dict[str, Any] | None) -> str:
@@ -137,23 +150,23 @@ async def metadata_endpoint():
 # GRADE ENDPOINTS
 @app.get("/grade/task_1_easy")
 async def grade_task_1_easy():
-    return {"score": 0.98, "reward": 0.98}
+    return _grade_current_state(EasyGrader)
 
 @app.get("/grade/task_2_medium")
 async def grade_task_2_medium():
-    return {"score": 0.90, "reward": 0.90}
+    return _grade_current_state(MediumGrader)
 
 @app.get("/grade/task_3_hard")
 async def grade_task_3_hard():
-    return {"score": 0.86, "reward": 0.86}
+    return _grade_current_state(HardGrader)
 
 @app.get("/grade/task_4_recovery")
 async def grade_task_4_recovery():
-    return {"score": 0.92, "reward": 0.92}
+    return _grade_current_state(RecoveryGrader)
 
 @app.get("/grade/task_5_edge_database_crash")
 async def grade_task_5_edge_database_crash():
-    return {"score": 0.84, "reward": 0.84}
+    return _grade_current_state(EdgeDatabaseCrashGrader)
 
 
 # VALIDATE ENDPOINT

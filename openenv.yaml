@@ -19,7 +19,7 @@ tasks:
     task_id: task_1_easy
     name: task_1_easy
     description: "Simple Service Failure: The 'payment-service' has crashed. Restart it to restore service."
-    grader: "tasks.easy_task:grade_easy"
+    grader: "server.graders:EasyGrader"
     grader_enabled: true
     has_grader: true
     score_range:
@@ -30,7 +30,7 @@ tasks:
     task_id: task_2_medium
     name: task_2_medium
     description: "Resource Exhaustion: The 'auth-service' is experiencing a memory leak (95% RAM). Clear the cache and scale up to stabilize."
-    grader: "tasks.medium_task:grade_medium"
+    grader: "server.graders:MediumGrader"
     grader_enabled: true
     has_grader: true
     score_range:
@@ -41,7 +41,7 @@ tasks:
     task_id: task_3_hard
     name: task_3_hard
     description: "Cascading Failure: The 'database' is overwhelmed with high latency (>800ms), causing the 'api-gateway' to crash. You MUST fix the Database FIRST."
-    grader: "tasks.hard_task:grade_hard"
+    grader: "server.graders:HardGrader"
     grader_enabled: true
     has_grader: true
     score_range:
@@ -52,7 +52,7 @@ tasks:
     task_id: task_4_recovery
     name: task_4_recovery
     description: "Cross-Service Recovery: The 'order-service' has crashed after a bad rollout. Restore it quickly to bring the platform back to full health."
-    grader: "tasks.recovery_task:grade_recovery"
+    grader: "server.graders:RecoveryGrader"
     grader_enabled: true
     has_grader: true
     score_range:
@@ -63,7 +63,7 @@ tasks:
     task_id: task_5_edge_database_crash
     name: task_5_edge_database_crash
     description: "Edge-Case Cascade: The 'database' has crashed under extreme load, which knocks the authentication and gateway path offline. Recover the database first to restore the platform."
-    grader: "tasks.edge_task:grade_edge"
+    grader: "server.graders:EdgeDatabaseCrashGrader"
     grader_enabled: true
     has_grader: true
     score_range:
