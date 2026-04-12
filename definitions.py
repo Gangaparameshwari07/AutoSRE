@@ -7,9 +7,9 @@ SCORE_FLOOR = 0.0
 SCORE_CEILING = 1.0
 
 TASK_GRADER_PATHS = {
-    "task_1_easy": "server.graders:EasyGrader",
-    "task_2_medium": "server.graders:MediumGrader",
-    "task_3_hard": "server.graders:HardGrader",
+    "task_1_easy": "tasks.graders:EasyGrader",
+    "task_2_medium": "tasks.graders:MediumGrader",
+    "task_3_hard": "tasks.graders:HardGrader",
 }
 
 def _build_task(

@@ -9,7 +9,7 @@ from environment import AutoSREEnv
 from llm_proxy import proxy_env_present, warm_proxy_once
 from models import Action
 from scoring import clamp_open_interval
-from .graders import (
+from tasks.graders import (
     EasyGrader,
     HardGrader,
     MediumGrader,
