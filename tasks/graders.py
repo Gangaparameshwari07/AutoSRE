@@ -3,9 +3,26 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from scoring import clamp_open_interval
-from .easy_task import grade_easy
-from .hard_task import grade_hard
-from .medium_task import grade_medium
+
+
+def _fallback_grade(_: Any = None) -> float:
+    return 0.02
+
+
+try:
+    from .easy_task import grade_easy
+except ImportError:
+    grade_easy = _fallback_grade
+
+try:
+    from .hard_task import grade_hard
+except ImportError:
+    grade_hard = _fallback_grade
+
+try:
+    from .medium_task import grade_medium
+except ImportError:
+    grade_medium = _fallback_grade
 
 
 class BaseTaskGrader:

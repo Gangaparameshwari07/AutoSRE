@@ -13,18 +13,22 @@ load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4.1-mini")
 HF_TOKEN = os.getenv("HF_TOKEN")
+API_KEY = os.getenv("API_KEY")
 DASHBOARD_URL = os.getenv("DASHBOARD_URL", "http://localhost:7860")
 TASK_NAME = os.getenv("TASK_ID", "task_3_hard")
 BENCHMARK = os.getenv("BENCHMARK", "autosre")
 MAX_STEPS = 10
 REQUEST_TIMEOUT = 30.0
 
-if HF_TOKEN is None:
-    raise ValueError("HF_TOKEN environment variable is required")
+LLM_API_KEY = HF_TOKEN or API_KEY
 
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=HF_TOKEN,
+client = (
+    OpenAI(
+        base_url=API_BASE_URL,
+        api_key=LLM_API_KEY,
+    )
+    if LLM_API_KEY
+    else None
 )
 
 # --- Helper Functions ---
@@ -84,6 +88,9 @@ def _fallback_action(state_text: str) -> tuple[str, str]:
 
 def choose_action(state_text: str) -> tuple[str, str]:
     """Attempts LLM inference, falls back to heuristics on error."""
+    if client is None:
+        return _fallback_action(state_text)
+
     prompt = f"Analyze state and return JSON {{'action': '...', 'target': '...'}}:\n{state_text}"
 
     try:
